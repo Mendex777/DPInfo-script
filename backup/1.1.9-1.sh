@@ -1,25 +1,27 @@
 #!/bin/bash
-# v 1.1.9
+# версия 1.1.9
 
+# Проверка установки команды bc
 check_bc_installed() {
     if ! command -v bc &> /dev/null; then
-        echo "bc 命令未安装，正在尝试安装..."
+        echo "Команда bc не установлена, пытаемся установить..."
         if [ -f /etc/debian_version ]; then
             sudo apt update && sudo apt install -y bc
         else
-            echo "不支持的操作系统，请手动安装 bc 后重试。"
+            echo "Операционная система не поддерживается, установите bc вручную и повторите."
             exit 1
         fi
         if ! command -v bc &> /dev/null; then
-            echo "安装 bc 失败，请检查网络或包管理器配置。"
+            echo "Установка bc не удалась, проверьте сеть или настройки пакетного менеджера."
             exit 1
         fi
-        echo "bc 已成功安装。"
+        echo "bc успешно установлен."
     else
-        echo "bc 已安装，继续执行脚本。"
+        echo "bc уже установлен, продолжаем выполнение скрипта."
     fi
 }
 
+# Проверка, существует ли в /etc/profile данный блок кода (игнорируя пробелы и пустые строки)
 check_code_exists() {
     local normalized_file
     normalized_file=$(grep -v '^\s*$' /etc/profile | tr -d '[:space:]')
@@ -32,126 +34,148 @@ check_code_exists() {
     fi
 }
 
+# Удаление MOTD
 remove_motd() {
-    echo "正在执行删除操作..."
-    
+    echo "Выполняется удаление..."
+
+    # Удаляем определённые блоки из /etc/profile
     sudo sed -i '/^if \[ -n "\$SSH_CONNECTION" \] && \[ -z "\$MOTD_SHOWN" \]; then/,/^fi$/d' /etc/profile
     sudo sed -i '/^if \[ -n "\$SSH_CONNECTION" \]; then/,/^fi$/d' /etc/profile
-    
+
+    # Удаляем файлы из /etc/update-motd.d
     for file in "00-debian-heads" "20-debian-sysinfo" "20-armbian-sysinfo2"; do
         [ -f "/etc/update-motd.d/$file" ] && sudo rm -f "/etc/update-motd.d/$file" 2>/dev/null
     done
-    
-    echo "删除完成"
+
+    echo "Удаление завершено"
 }
 
+# Загрузка скриптов MOTD
 download_motd_script() {
-    read -r -p "请选择操作系统类型 (输入debian/armbian/回车退出): " os_type
-    os_type=${os_type,,}
+    read -r -p "Выберите тип операционной системы (debian/armbian/Enter для выхода): " os_type
+    os_type=${os_type,,}  # преобразование в нижний регистр
+
     if [ "$os_type" == "debian" ]; then
         for file_name in "00-debian-heads" "20-debian-sysinfo"; do
             file_dest="/etc/update-motd.d/$file_name"
             if [ -f "$file_dest" ]; then
                 if [ "$file_name" == "00-debian-heads" ]; then
-                    echo "文件1已存在，删除旧文件..."
+                    echo "Файл 1 уже существует, удаляем старый..."
                 else
-                    echo "文件2已存在，删除旧文件..."
+                    echo "Файл 2 уже существует, удаляем старый..."
                 fi
                 sudo rm -f "$file_dest"
             fi
         done
+
         file_url_1="https://ghproxy.cc/https://raw.githubusercontent.com/qljsyph/bash-script/refs/heads/main/sysinfo/00-debian-heads"
         file_url_2="https://ghproxy.cc/https://raw.githubusercontent.com/qljsyph/bash-script/refs/heads/main/sysinfo/20-debian-sysinfo"
-        echo "正在下载文件1..."
+
+        echo "Скачиваем файл 1..."
         curl -s -o "/etc/update-motd.d/00-debian-heads" "$file_url_1"
         download_status_1=$?
-        echo "正在下载文件2..."
+
+        echo "Скачиваем файл 2..."
         curl -s -o "/etc/update-motd.d/20-debian-sysinfo" "$file_url_2"
         download_status_2=$?
+
         if [ $download_status_1 -eq 0 ] && [ $download_status_2 -eq 0 ]; then
             chmod 755 /etc/update-motd.d/{00-debian-heads,20-debian-sysinfo}
-            echo "Debian 文件已成功下载并设置权限为 755。"
+            echo "Файлы для Debian успешно загружены и права установлены на 755."
         else
-            echo "文件下载失败! 错误信息：$download_status_2"
+            echo "Ошибка загрузки файлов! Код ошибки: $download_status_2"
             exit 1
         fi
+
     elif [ "$os_type" == "armbian" ]; then
         file_url="https://ghproxy.cc/https://raw.githubusercontent.com/qljsyph/bash-script/refs/heads/main/sysinfo/20-armbian-sysinfo2"
         file_name="20-armbian-sysinfo2"
         file_dest="/etc/update-motd.d/$file_name"
+
         if [ -f "$file_dest" ]; then
-            echo "文件已存在，删除旧文件..."
+            echo "Файл уже существует, удаляем старый..."
             sudo rm -f "$file_dest"
         fi
-        echo "正在从 GitHub 下载文件..."
+
+        echo "Скачиваем файл с GitHub..."
         curl -s -o "$file_dest" "$file_url"
         download_status=$?
+
         if [ $download_status -eq 0 ]; then
             chmod 755 "$file_dest"
-            echo "Armbian 文件已成功下载并设置权限为 755。"
+            echo "Файл для Armbian успешно загружен и права установлены на 755."
         else
-            echo "文件下载失败! 错误信息：$download_status"
+            echo "Ошибка загрузки файла! Код ошибки: $download_status"
             exit 1
         fi
+
     else
-        echo "无效的操作系统类型，退出脚本。"
+        echo "Неверный тип ОС, скрипт завершает работу."
         exit 1
     fi
+
+    # Проверяем, используется ли bc в скачанном скрипте
     if grep -q "bc" "$file_dest"; then
-        echo "检测到脚本使用了 bc，确保其已正确安装..."
+        echo "Обнаружено использование bc в скрипте, проверяем установку..."
         check_bc_installed
     fi
 }
 
+# Обработка изменений в /etc/profile
 handle_profile_modification() {
     local tool_choice=$1
     local check_code=""
+
     if [ "$tool_choice" == "1" ]; then
         check_code="if [ -n \"\$SSH_CONNECTION\" ] && [ -z \"\$MOTD_SHOWN\" ]; then
     export MOTD_SHOWN=1
     run-parts /etc/update-motd.d
 fi"
-        echo "正在清空标志区文件..."
+        echo "Очищаем файл /etc/motd..."
         sudo truncate -s 0 /etc/motd
-        echo "标志区文件已清空。"
+        echo "Файл /etc/motd очищен."
     else
         check_code="if [ -n \"\$SSH_CONNECTION\" ]; then
     run-parts /etc/update-motd.d
 fi"
     fi
+
     if ! check_code_exists "$check_code"; then
-        echo "未找到完全匹配的代码块，准备添加..."
+        echo "Полный блок кода не найден, добавляем..."
+
         existing_count=$(grep -c "run-parts /etc/update-motd.d" /etc/profile)
         if [ "$existing_count" -gt 0 ]; then
-            echo "警告：已存在类似的代码块（$existing_count 处）"
-            echo "请手动检查 /etc/profile 中包含update-motd.d的完整代码块，确认后手动删除重新执行脚本。"
+            echo "Внимание: похожий блок кода уже существует ($existing_count раз)"
+            echo "Пожалуйста, вручную проверьте /etc/profile и удалите старый блок, затем запустите скрипт снова."
             exit 1
         fi
+
         sudo sed -i -e '$a\\' /etc/profile
         echo "$check_code" | sudo tee -a /etc/profile > /dev/null
-        echo "代码块已成功添加到模块"
+        echo "Блок кода успешно добавлен."
     else
-        echo "完整的代码块已存在于模块，跳过添加"
+        echo "Полный блок кода уже существует, пропускаем добавление."
     fi
 }
 
+# Главная функция
 main() {
-    echo "请选择操作："
-    echo "1. 安装"
-    echo "2. 删除"
-    read -r -p "请输入选项 (1 或 2): " operation_choice
-    
+    echo "Выберите операцию:"
+    echo "1. Установка"
+    echo "2. Удаление"
+    read -r -p "Введите вариант (1 или 2): " operation_choice
+
     case $operation_choice in
         1)
-            echo "开始安装..."
+            echo "Начинаем установку..."
             check_bc_installed
             download_motd_script
-            echo "请选择使用的工具类型(必看wiki)："
+            echo "Выберите используемый инструмент (обязательно ознакомьтесь с wiki):"
             echo "1. FinalShell/MobaXterm"
-            echo "2. 其他工具(ServerBox等)"
-            read -r -p "请输入选项 (1 或 2): " tool_choice
+            echo "2. Другие инструменты (ServerBox и др.)"
+            read -r -p "Введите вариант (1 или 2): " tool_choice
             if [[ ! "$tool_choice" =~ ^[12]$ ]]; then
-                echo "无效的选项，请输入 1 或 2"
+                echo "Неверный вариант, введите 1 или 2."
                 exit 1
             fi
             handle_profile_modification "$tool_choice"
@@ -160,7 +184,7 @@ main() {
             remove_motd
             ;;
         *)
-            echo "无效的选项，请输入 1 或 2"
+            echo "Неверный вариант, введите 1 или 2."
             exit 1
             ;;
     esac
