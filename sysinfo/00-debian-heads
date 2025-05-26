@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# 定义青色
+# Определяем бирюзовый цвет
 CYAN='\033[0;36m'
-NC='\033[0m' # 恢复默认颜色
+NC='\033[0m' # Сброс цвета к стандартному
 
 # DEBIAN
 echo -e "${CYAN} ██████╗ ███████╗██████╗ ██╗█████╗  ███╗   ██╗ ${NC}"
@@ -11,4 +11,4 @@ echo -e "${CYAN} ██║  ██║█████╗  ██████╔�
 echo -e "${CYAN} ██║  ██║██╔══╝  ██╔══██╗██║██╔══██║██║╚██╗██║ ${NC}"
 echo -e "${CYAN} ██████╔╝███████╗██████╔╝██║██║  ██║██║ ╚████║ ${NC}"
 echo -e "${CYAN} ═════╝ ╚══════╝╚═════╝ ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝  ${NC}"
-echo -e "${CYAN} originate from https://github.com/qljsyph/bash-script  版本v1.2.5beta ${RESET}"
+echo -e "${CYAN} источник: https://github.com/qljsyph/bash-script  версия v1.2.5beta ${RESET}"
