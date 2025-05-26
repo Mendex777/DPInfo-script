@@ -22,7 +22,7 @@
 
 ## Однострочный установочный скрипт:
 ```
-bash <(curl -sL https://ghfast.top/https://raw.githubusercontent.com/qljsyph/DPInfo-script/refs/heads/main/auto-sysinfo.sh)
+bash <(curl -sL https://raw.githubusercontent.com/Mendex777/DPInfo-script/refs/heads/main/auto-sysinfo.sh)
 ```
 # Отображаемая информация о системе
 
